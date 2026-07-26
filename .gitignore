@@ -55,4 +55,4 @@ Thumbs.db
 *~
 
 # ── Local-only repo governance (applied to GitHub via `gh api`, not tracked here) ──
-.github/rulesets/protect-main.json
+.github/rulesets/*.json
