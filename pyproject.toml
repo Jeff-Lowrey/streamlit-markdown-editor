@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "streamlit-markdown-editor"
+version = "0.0.0"
+description = "A dual-mode (WYSIWYG/raw) markdown editor component for Streamlit."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Jeff Lowrey" }]
+keywords = ["streamlit", "markdown", "editor", "wysiwyg", "component"]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = [
+  "streamlit>=1.30,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaral-labs/streamlit-markdown-editor"
+Repository = "https://github.com/jaral-labs/streamlit-markdown-editor"
+Issues = "https://github.com/jaral-labs/streamlit-markdown-editor/issues"
+
+# PEP 735 dev dependency group (installed via `uv sync`).
+[dependency-groups]
+dev = [
+  "ruff",
+  "mypy",
+  "pytest",
+  "pytest-cov",
+  "pre-commit",
+]
+
+# src-layout: ship the package from src/ (TECH-001).
+[tool.hatch.build.targets.wheel]
+packages = ["src/streamlit_markdown_editor"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PL", "RUF", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"] # docstrings not required in tests
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=streamlit_markdown_editor --cov-report=term-missing --cov-fail-under=85"
