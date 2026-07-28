@@ -1,0 +1,72 @@
+name: Tag check
+
+# Validates release tags on push. This is the CI-based substitute for a
+# GitHub tag ruleset `tag_name_pattern` rule, which is not available on this
+# repo's plan tier. It runs *after* the tag exists (reactive), so make the
+# publish workflow depend on / include this check to keep a malformed tag
+# from triggering a release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install packaging
+        run: python -m pip install --upgrade packaging
+
+      - name: Validate release tag
+        run: |
+          python - "${GITHUB_REF_NAME}" <<'PY'
+          import pathlib, re, sys
+          try:
+              import tomllib  # Python 3.11+
+          except ModuleNotFoundError:  # pragma: no cover
+              import tomli as tomllib
+          from packaging.version import Version
+
+          # Canonical release-tag pattern. Kept in LOCKSTEP with the org ruleset
+          # 'protect-release-tags' (tag_name_pattern). If you change one, change both.
+          CANON = r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?$"
+
+          def fail(msg):
+              print(f"::error::{msg}")
+              raise SystemExit(1)
+
+          tag = sys.argv[1]
+
+          # 1) name shape - identical rule to the org tag ruleset
+          if not re.fullmatch(CANON, tag):
+              fail(f"Tag '{tag}' must match the release pattern: v MAJOR.MINOR.PATCH "
+                   f"with optional aN/bN/rcN, .postN, .devN (e.g. v1.2.3, v1.2.3rc1, "
+                   f"v1.2.3.post1). This mirrors the org ruleset.")
+          raw = tag[1:]
+          print(f"OK: '{tag}' matches the canonical release-tag pattern.")
+
+          # 2) consistency with pyproject.toml, when present and static
+          pp = pathlib.Path("pyproject.toml")
+          if not pp.exists():
+              print("No pyproject.toml yet - skipping version-consistency check.")
+              raise SystemExit(0)
+          declared = tomllib.loads(pp.read_text(encoding="utf-8")).get("project", {}).get("version")
+          if declared is None:
+              print("pyproject.toml has no static [project].version (dynamic?) - skipping.")
+              raise SystemExit(0)
+          if Version(raw) != Version(declared):
+              fail(f"Tag '{tag}' (=> {raw}) does not match pyproject [project].version '{declared}'.")
+          print(f"OK: tag '{tag}' matches pyproject version '{declared}'.")
+          PY
